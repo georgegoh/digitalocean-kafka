@@ -19,12 +19,12 @@ resource "ansible_group" "kafka_connect" {
   }
 }
 
-# Set the variable value in *.tfvars file
+# Set the variable values in main.auto.tfvars file
 # or using -var="do_token=..." CLI option
 variable "do_token" {
   description = "Digital Ocean Personal Access Token"
-  type        = string
-  sensitive   = true
+  type = string
+  sensitive = true
 }
 
 # Configure the DigitalOcean Provider
