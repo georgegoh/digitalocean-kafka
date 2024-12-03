@@ -4,7 +4,7 @@
 
 This is a collection of templates that generate working configs to:
 
-1. Create a small Kafka cluster consising of 3 zk, 3 brokers, and a single 'utility' node that contains several roles (e.g., Control Center, Schema Registry, Proxy REST, etc).
+1. Create a small Kafka cluster consisting of 3 zk, 3 brokers, and a single 'utility' node that contains several roles (e.g., Control Center, Schema Registry, Proxy REST, etc).
 2. Generates a `hosts.yml` file that is ready to use with Confluent Platform Ansible playbooks.
 
 ## How to use
