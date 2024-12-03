@@ -7,7 +7,7 @@ env:
 	echo "install the required dependencies to get cp-ansible to work"
 	ansible-galaxy install -r requirements.yml
 infra:
-	tofu plan -out=./confluent_platform.plan
+	MY_IPADDR=`curl ifconfig.me`; tofu plan -var="ansible_host=$$MY_IPADDR" -var="development_host=$$MY_IPADDR" -out=./confluent_platform.plan
 	tofu apply ./confluent_platform.plan
 	mkdir ./ansible_ssh
 	tofu output -raw private_key > ./ansible_ssh/private_key

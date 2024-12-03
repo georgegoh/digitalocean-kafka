@@ -26,6 +26,15 @@ variable "do_token" {
   type = string
   sensitive = true
 }
+variable "ansible_host" {
+  description = "The public IP address of the Ansible host (this host)"
+  type = string
+}
+variable "development_host" {
+  description = "The public IP address of the development host that will access Control Center, etc."
+  type = string
+}
+
 
 # Configure the DigitalOcean Provider
 provider "digitalocean" {
@@ -87,7 +96,7 @@ resource "digitalocean_firewall" "generated_fw_ansible" {
   inbound_rule {
     protocol = "tcp"
     port_range = "22"
-    source_addresses = ["<ansible host ip>"]
+    source_addresses = [var.ansible_host]
   }
 }
 
@@ -99,19 +108,19 @@ resource "digitalocean_firewall" "generated_fw_dev" {
   inbound_rule {
     protocol = "tcp"
     port_range = "8082"
-    source_addresses = ["<dev host ip>"]
+    source_addresses = [var.development_host]
   }
 
   inbound_rule {
     protocol = "tcp"
     port_range = "8090"
-    source_addresses = ["<dev host ip>"]
+    source_addresses = [var.development_host]
   }
 
   inbound_rule {
     protocol = "tcp"
     port_range = "9021"
-    source_addresses = ["<dev host ip>"]
+    source_addresses = [var.development_host]
   }
 }
 

@@ -27,4 +27,7 @@ really want to do.
 
 ## Details
 
-<TODO>
+The Makefile relies on being able to call `curl ifconfig.me` to figure out the
+localhost public IP address. Then it sets up DigitalOcean firewall rules to 
+*only* allow access to the Kafka nodes via that IP. We don't want them to be
+accessible to the world.
