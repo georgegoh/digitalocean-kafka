@@ -1,0 +1,7 @@
+---
+collections:
+  - name: ansible.posix
+  - name: community.general
+  - name: https://github.com/confluentinc/cp-ansible.git
+    type: git
+    version: 7.6.1-post

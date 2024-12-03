@@ -1,0 +1,43 @@
+all:
+  vars:
+    ansible_connection: ssh
+    ansible_user: root
+    ansible_become: true
+    ansible_ssh_common_args: -o StrictHostKeyChecking=no
+    zookeeper_custom_properties:
+      4lw.commands.whitelist: '*'
+
+zookeeper:
+  hosts:
+  %{ for addr in zk_ip_addrs ~}
+  ${addr}:
+  %{ endfor ~}
+
+kafka_broker:
+  hosts:
+  %{ for addr in broker_ip_addrs ~}
+  ${addr}:
+  %{ endfor ~}
+
+schema_registry:
+  hosts:
+    ${utility_ip_addr}:
+
+kafka_rest:
+  hosts:
+    ${utility_ip_addr}:
+
+ksql:
+  hosts:
+    ${utility_ip_addr}:
+
+kafka_connect:
+  hosts:
+    ${utility_ip_addr}:
+      vars:
+        kafka_connect_confluent_hub_plugins:
+          - confluentinc/kafka-connect-datagen:0.4.0
+
+control_center:
+  hosts:
+    ${controlcenter_ip_addr}:

@@ -1,0 +1,6 @@
+hosts.yml
+main.auto.tfvars
+.terraform
+.terraform.lock.hcl
+terraform.tfstate
+ansible_ssh
