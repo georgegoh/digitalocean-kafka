@@ -11,14 +11,6 @@ terraform {
   }
 }
 
-resource "ansible_group" "kafka_connect" {
-  name     = "kafka_connect"
-  children = ["utility"]
-  variables = {
-    kafka_connect_confluent_hub_plugins = "confluentinc/kafka-connect-datagen:0.4.0"
-  }
-}
-
 # Set the variable values in main.auto.tfvars file
 # or using -var="do_token=..." CLI option
 variable "do_token" {
@@ -34,11 +26,23 @@ variable "development_host" {
   description = "The public IP address of the development host that will access Control Center, etc."
   type = string
 }
-
+variable "region" {
+  description = "The region to deploy all DigitalOcean resources"
+  type = string
+  default = "sgp1"
+}
 
 # Configure the DigitalOcean Provider
 provider "digitalocean" {
   token = var.do_token
+}
+
+resource "ansible_group" "kafka_connect" {
+  name     = "kafka_connect"
+  children = ["utility"]
+  variables = {
+    kafka_connect_confluent_hub_plugins = "confluentinc/kafka-connect-datagen:0.4.0"
+  }
 }
 
 # Create new SSH key
@@ -55,7 +59,7 @@ resource "digitalocean_ssh_key" "generated_key" {
 # Create the VPC
 resource "digitalocean_vpc" "generated_vpc" {
   name = "terraform-vpc-kafka"
-  region = "sgp1"
+  region = var.region
   description = "An auto-generated VPC to isolate Kafka instances."
 }
 
@@ -125,62 +129,24 @@ resource "digitalocean_firewall" "generated_fw_dev" {
 }
 
 # Create 3 zookeeper servers
-resource "digitalocean_droplet" "zookeeper_1" {
+resource "digitalocean_droplet" "zookeeper" {
+  count = 3
   image = "rockylinux-9-x64"
-  name = "zookeeper"
-  region = "sgp1"
+  name = "zookeeper-${count.index}"
   size = "s-4vcpu-8gb"
-  vpc_uuid = digitalocean_vpc.generated_vpc.id
-  ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka"]
-}
-
-resource "digitalocean_droplet" "zookeeper_2" {
-  image = "rockylinux-9-x64"
-  name = "zookeeper"
-  region = "sgp1"
-  size = "s-4vcpu-8gb"
-  vpc_uuid = digitalocean_vpc.generated_vpc.id
-  ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka"]
-}
-
-resource "digitalocean_droplet" "zookeeper_3" {
-  image = "rockylinux-9-x64"
-  name = "zookeeper"
-  region = "sgp1"
-  size = "s-4vcpu-8gb"
+  region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
   tags = ["ansible_kafka"]
 }
 
 # Create 3 brokers
-resource "digitalocean_droplet" "broker_1" {
+resource "digitalocean_droplet" "broker" {
+  count = 3
   image = "rockylinux-9-x64"
-  name = "broker-1"
-  region = "sgp1"
+  name = "broker-${count.index}"
   size = "s-4vcpu-8gb"
-  vpc_uuid = digitalocean_vpc.generated_vpc.id
-  ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka"]
-}
-
-resource "digitalocean_droplet" "broker_2" {
-  image = "rockylinux-9-x64"
-  name = "broker-2"
-  region = "sgp1"
-  size = "s-4vcpu-8gb"
-  vpc_uuid = digitalocean_vpc.generated_vpc.id
-  ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka"]
-}
-
-resource "digitalocean_droplet" "broker_3" {
-  image = "rockylinux-9-x64"
-  name = "broker-3"
-  region = "sgp1"
-  size = "s-4vcpu-8gb"
+  region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
   tags = ["ansible_kafka"]
@@ -190,8 +156,8 @@ resource "digitalocean_droplet" "broker_3" {
 resource "digitalocean_droplet" "utility" {
   image = "rockylinux-9-x64"
   name = "utility"
-  region = "sgp1"
   size = "s-4vcpu-8gb"
+  region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
   tags = ["ansible_kafka"]
@@ -201,8 +167,8 @@ resource "digitalocean_droplet" "utility" {
 resource "digitalocean_droplet" "control_center" {
   image = "rockylinux-9-x64"
   name = "control-center"
-  region = "sgp1"
   size = "s-4vcpu-8gb"
+  region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
   tags = ["ansible_kafka"]
@@ -211,8 +177,8 @@ resource "digitalocean_droplet" "control_center" {
 resource "local_file" "hosts_yaml" {
   content = templatefile("inventory.tmpl",
     {
-      zk_ip_addrs = [digitalocean_droplet.zookeeper_1.ipv4_address, digitalocean_droplet.zookeeper_2.ipv4_address, digitalocean_droplet.zookeeper_3.ipv4_address]
-      broker_ip_addrs = [digitalocean_droplet.broker_1.ipv4_address, digitalocean_droplet.broker_2.ipv4_address, digitalocean_droplet.broker_3.ipv4_address]
+      zk_ip_addrs = digitalocean_droplet.zookeeper[*].ipv4_address
+      broker_ip_addrs = digitalocean_droplet.broker[*].ipv4_address
       utility_ip_addr = digitalocean_droplet.utility.ipv4_address
       controlcenter_ip_addr = digitalocean_droplet.control_center.ipv4_address
     }
