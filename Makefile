@@ -16,7 +16,7 @@ config:
 	ansible-playbook --private-key ./ansible_ssh/private_key -i hosts.yml confluent.platform.all
 
 destroy:
-	tofu destroy
+	tofu destroy -var="ansible_host=''" -var="development_host=''"
 
 clean: destroy
 	rm -rf hosts.yml terraform.tfstate .terraform.lock.hcl .terraform ansible_ssh confluent_platform.plan
