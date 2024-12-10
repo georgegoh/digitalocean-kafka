@@ -1,0 +1,13 @@
+[kdcdefaults]
+ kdc_ports = {{ kerberos_server_kdc_port }}
+ kdc_tcp_ports = {{ kerberos_server_kdc_port }}
+
+[realms]
+ {{ kerberos_server_realm_name|upper() }} = {
+  acl_file = /var/kerberos/krb5kdc/kadm5.acl
+  dict_file = /usr/share/dict/words
+  admin_keytab = /var/kerberos/krb5kdc/kadm5.keytab
+  supported_enctypes = {{ kerberos_server_supported_enctypes }}
+  max_life = {{ kerberos_server_ticket_lifetime }}
+  max_renewable_life = {{ kerberos_server_renew_lifetime }}
+ }

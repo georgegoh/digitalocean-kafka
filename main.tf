@@ -101,6 +101,7 @@ resource "digitalocean_firewall" "generated_fw_ansible" {
     protocol = "tcp"
     port_range = "22"
     source_addresses = [var.ansible_host]
+    source_tags = ["kerberos_server"]
   }
 }
 
@@ -128,6 +129,93 @@ resource "digitalocean_firewall" "generated_fw_dev" {
   }
 }
 
+resource "digitalocean_firewall" "generated_fw_kerberos_clients" {
+  name = "terraform-firewall-kerberos-clients"
+  tags = ["ansible_kerberos"]
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "88"
+    source_tags = ["kerberos_client"]
+  }
+
+  inbound_rule {
+    protocol = "udp"
+    port_range = "88"
+    source_tags = ["kerberos_client"]
+  }
+
+  outbound_rule {
+    protocol = "icmp"
+    destination_addresses = ["0.0.0.0/0", "::/0"]
+  }
+
+  outbound_rule {
+    protocol = "tcp"
+    port_range = "1-65535"
+    destination_addresses = ["0.0.0.0/0", "::/0"]
+  }
+
+  outbound_rule {
+    protocol = "udp"
+    port_range = "1-65535"
+    destination_addresses = ["0.0.0.0/0", "::/0"]
+  }
+}
+
+# Create the inbound access firewall rule that allows the Ansible host to reach the target nodes
+resource "digitalocean_firewall" "generated_fw_kerberos_servers" {
+  name = "terraform-firewall-kerberos-servers"
+  tags = ["ansible_kerberos"]
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "22"
+    source_addresses = [var.ansible_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "88"
+    source_addresses = [var.ansible_host]
+  }
+
+  inbound_rule {
+    protocol = "udp"
+    port_range = "88"
+    source_addresses = [var.ansible_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "749"
+    source_addresses = [var.ansible_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "4444"
+    source_addresses = [var.ansible_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "464"
+    source_addresses = [var.ansible_host]
+  }
+}
+
+# Create a kerberos server
+resource "digitalocean_droplet" "kerberos_server" {
+  image = "rockylinux-9-x64"
+  name = "krb5-server"
+  size = "s-4vcpu-8gb"
+  region = var.region
+  vpc_uuid = digitalocean_vpc.generated_vpc.id
+  ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
+  tags = ["ansible_kerberos", "kerberos_client", "kerberos_server"]
+}
+
 # Create 3 zookeeper servers
 resource "digitalocean_droplet" "zookeeper" {
   count = 3
@@ -137,7 +225,7 @@ resource "digitalocean_droplet" "zookeeper" {
   region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka"]
+  tags = ["ansible_kafka", "kerberos_client"]
 }
 
 # Create 3 brokers
@@ -149,7 +237,7 @@ resource "digitalocean_droplet" "broker" {
   region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka"]
+  tags = ["ansible_kafka", "kerberos_client"]
 }
 
 # Create a combined schema_registry/ksql/kafka_connect
@@ -160,7 +248,7 @@ resource "digitalocean_droplet" "utility" {
   region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka"]
+  tags = ["ansible_kafka", "kerberos_client"]
 }
 
 # Create a control_center
@@ -171,12 +259,13 @@ resource "digitalocean_droplet" "control_center" {
   region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka"]
+  tags = ["ansible_kafka", "kerberos_client"]
 }
 
 resource "local_file" "hosts_yaml" {
   content = templatefile("inventory.tmpl",
     {
+      kdc_ip_addr = digitalocean_droplet.kerberos_server.ipv4_address
       zk_ip_addrs = digitalocean_droplet.zookeeper[*].ipv4_address
       broker_ip_addrs = digitalocean_droplet.broker[*].ipv4_address
       utility_ip_addr = digitalocean_droplet.utility.ipv4_address

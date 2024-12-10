@@ -1,0 +1,69 @@
+---
+- name: Add the OS specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Install the kerberos packages
+  yum:
+    name: "{{ kerberos_server_redhat_pkg }}"
+    state: present
+
+- name: Copy the KDC configuration file
+  template:
+    src: kdc.conf.j2
+    dest: /var/kerberos/krb5kdc/kdc.conf
+  notify:
+    - restart kerberos
+
+- name: Copy the KDC ACL configuration file
+  template:
+    src: kadm5.acl.j2
+    dest: /var/kerberos/krb5kdc/kadm5.acl
+  notify:
+    - restart kerberos
+
+- name: Copy the client configuration file
+  template:
+    src: krb5.conf.j2
+    dest: /etc/krb5.conf
+
+- name: Create the initial Kerberos database
+  shell: >
+    set -o pipefail;
+    echo -e "{{ kerberos_server_master_db_pass }}\n{{ kerberos_server_master_db_pass }}" | kdb5_util create -s;
+    touch /var/kerberos/db_created creates=/var/kerberos/db_created
+
+- name: Start the Kerberos services
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: True
+  with_items: "{{ kerberos_service }}"
+
+- name: Create an admin user for administering the Kerberos database
+  shell: >
+    set -o pipefail;
+    echo -e "{{ kerberos_server_kadmin_pass }}\n{{ kerberos_server_kadmin_pass }}" |
+    kadmin.local  -q "addprinc {{ kerberos_server_kadmin_user }}/admin";
+    touch /var/kerberos/admin_created creates=/var/kerberos/admin_created
+
+- name: Get existing users
+  command: kadmin.local -q "listprincs"
+  ignore_errors: yes
+  changed_when: false
+  register: existing_users
+
+- name: Ensure users exist
+  command: kadmin.local -q "addprinc -pw {{ item.password }} {{ item.name }}"
+  when: >
+    item.state == 'present' and
+    existing_users.stdout.find('@'.join((item.name, (kerberos_server_realm_name | upper())))) == -1
+  no_log: true
+  with_items: "{{ kerberos_server_users }}"
+
+- name: Remove absent users
+  command: kadmin.local -q "delprinc -force {{ item.name }}"
+  when: >
+    item.state == 'absent' and
+    existing_users.stdout.find('@'.join((item.name, (kerberos_server_realm_name | upper())))) >= 0
+  no_log: true
+  with_items: "{{ kerberos_server_users }}"

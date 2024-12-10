@@ -1,0 +1,22 @@
+[logging]
+ default = FILE:/var/log/krb5libs.log
+ kdc = FILE:/var/log/krb5kdc.log
+ admin_server = FILE:/var/log/kadmind.log
+
+[libdefaults]
+ default_realm = {{ kerberos_server_realm_name|upper() }}
+ dns_lookup_realm = false
+ dns_lookup_kdc = false
+ ticket_lifetime = {{ kerberos_server_ticket_lifetime }}
+ renew_lifetime = {{ kerberos_server_renew_lifetime }}
+ forwardable = true
+
+[realms]
+ {{ kerberos_server_realm_name| upper() }} = {
+  kdc = {{ ansible_hostname }}.{{ kerberos_server_realm_name|lower() }}
+  admin_server = {{ ansible_hostname }}.{{ kerberos_server_realm_name|lower() }}
+ }
+
+[domain_realm]
+ .{{ kerberos_server_realm_name|lower() }} = {{ kerberos_server_realm_name|upper() }}
+  {{ kerberos_server_realm_name|lower() }} = {{ kerberos_server_realm_name|upper() }}

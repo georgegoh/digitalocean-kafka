@@ -1,0 +1,5 @@
+---
+kerberos_server_redhat_pkg:
+  - krb5-libs
+  - krb5-server
+  - krb5-workstation

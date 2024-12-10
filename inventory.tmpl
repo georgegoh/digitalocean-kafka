@@ -4,36 +4,57 @@ all:
     ansible_user: root
     ansible_become: true
     ansible_ssh_common_args: -o StrictHostKeyChecking=no
+    kerberos_configure: true
+    kerberos:
+      realm: example.com
+      kdc_hostname:  ${kdc_ip_addr}
+      admin_hostname: ${kdc_ip_addr}
     zookeeper_custom_properties:
       4lw.commands.whitelist: '*'
+
+kerberos_server:
+  hosts:
+    ${kdc_ip_addr}:
 
 zookeeper:
   hosts:
   %{ for addr in zk_ip_addrs ~}
   ${addr}:
+      zookeeper_kerberos_keytab_path: ./keytabs/zookeeper-${addr}.internal.keytab
+      zookeeper_kerberos_principal: zookeeper/${addr}@EXAMPLE.COM
   %{ endfor ~}
 
 kafka_broker:
   hosts:
   %{ for addr in broker_ip_addrs ~}
   ${addr}:
+      kafka_broker_kerberos_keytab_path: ./keytabs/kafka-${addr}.internal.keytab
+      kafka_broker_kerberos_principal: kafka/${addr}@EXAMPLE.COM
   %{ endfor ~}
 
 schema_registry:
   hosts:
     ${utility_ip_addr}:
+      schema_registry_kerberos_keytab_path: ./keytabs/schemaregistry-${utility_ip_addr}.internal.keytab
+      schema_registry_kerberos_principal: schemaregistry/${utility_ip_addr}@EXAMPLE.COM
 
 kafka_rest:
   hosts:
     ${utility_ip_addr}:
+      kafka_rest_kerberos_keytab_path: ./keytabs/restproxy-${utility_ip_addr}.internal.keytab
+      kafka_rest_kerberos_principal: restproxy/${utility_ip_addr}@EXAMPLE.COM
 
 ksql:
   hosts:
     ${utility_ip_addr}:
+      ksql_kerberos_keytab_path: ./keytabs/ksql-${utility_ip_addr}.internal.keytab
+      ksql_kerberos_principal: ksql/${utility_ip_addr}@EXAMPLE.COM
 
 kafka_connect:
   hosts:
     ${utility_ip_addr}:
+      kafka_connect_kerberos_keytab_path: ./keytabs/connect-${utility_ip_addr}.internal.keytab
+      kafka_connect_kerberos_principal: connect/${utility_ip_addr}@EXAMPLE.COM
       vars:
         kafka_connect_confluent_hub_plugins:
           - confluentinc/kafka-connect-datagen:0.4.0
@@ -41,3 +62,5 @@ kafka_connect:
 control_center:
   hosts:
     ${controlcenter_ip_addr}:
+      control_center_kerberos_keytab_path: ./keytabs/controlcenter-${controlcenter_ip_addr}.internal.keytab
+      control_center_kerberos_principal: controlcenter/${controlcenter_ip_addr}@EXAMPLE.COM
