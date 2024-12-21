@@ -1,4 +1,4 @@
-
+.PHONY: all init build config kerberos confluent addons destroy clean
 all: init build config
 
 init:
@@ -14,13 +14,16 @@ build:
 	tofu output -raw private_key > ./ansible_ssh/private_key
 	chmod 0400 ./ansible_ssh/private_key
 
+config: kerberos confluent addons
+
 kerberos:
 	ansible-playbook playbooks/kerberos.yml
 
 confluent:
 	ansible-playbook confluent.platform.all
 
-config: kerberos confluent
+addons:
+	ansible-playbook playbooks/addons.yml
 
 destroy:
 	tofu destroy -var="ansible_host=''" -var="development_host=''"

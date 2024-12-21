@@ -1,0 +1,14 @@
+[Unit]
+Description=Run recovery script if DC failure detected
+Before=confluent-zookeeper.service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/failback.sh
+RemainAfterExit=yes
+TimeoutSec=0
+
+[Install]
+WantedBy=multi-user.target

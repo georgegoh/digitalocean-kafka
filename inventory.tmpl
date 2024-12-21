@@ -11,6 +11,14 @@ all:
       admin_hostname: ${kdc_ip_addr}
     zookeeper_custom_properties:
       4lw.commands.whitelist: '*'
+      group.1: "1:2:3"
+      group.2: "4:5:6"
+      weight.1: 0
+      weight.2: 0
+      weight.3: 0
+      weight.4: 1
+      weight.5: 1
+      weight.6: 1
 
 kerberos_server:
   hosts:

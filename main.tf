@@ -112,6 +112,12 @@ resource "digitalocean_firewall" "generated_fw_dev" {
 
   inbound_rule {
     protocol = "tcp"
+    port_range = "2181"
+    source_addresses = [var.development_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
     port_range = "8082"
     source_addresses = [var.development_host]
   }
@@ -216,9 +222,9 @@ resource "digitalocean_droplet" "kerberos_server" {
   tags = ["ansible_kerberos", "kerberos_client", "kerberos_server"]
 }
 
-# Create 3 zookeeper servers
+# Create 6 zookeeper servers
 resource "digitalocean_droplet" "zookeeper" {
-  count = 3
+  count = 6
   image = "rockylinux-9-x64"
   name = "zookeeper-${count.index}"
   size = "s-4vcpu-8gb"
