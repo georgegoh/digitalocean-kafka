@@ -33,6 +33,10 @@ zookeeper:
   %{ endfor ~}
 
 kafka_broker:
+  vars:
+    kafka_broker_custom_properties:
+      num.network.threads: 16
+      num.io.threads: 16
   hosts:
   %{ for addr in broker_ip_addrs ~}
   ${addr}:
