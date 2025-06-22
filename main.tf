@@ -235,6 +235,13 @@ resource "digitalocean_firewall" "generated_fw_bootstrap" {
 
   inbound_rule {
     protocol = "tcp"
+    port_range = "8090"
+    source_addresses = [var.ansible_host]
+    source_load_balancer_uids = [digitalocean_loadbalancer.bootstrap_lb.id]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
     port_range = "9092"
     source_addresses = [var.ansible_host]
     source_load_balancer_uids = [digitalocean_loadbalancer.bootstrap_lb.id]
