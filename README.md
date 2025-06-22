@@ -6,6 +6,7 @@ This is a collection of templates that generate working configs to:
 
 1. Create a small Kafka cluster consisting of 3 zk, 3 brokers, and a single 'utility' node that contains several roles (e.g., Control Center, Schema Registry, Proxy REST, etc).
 2. Generate a `hosts.yml` file for you that is ready to use with Confluent Platform Ansible playbooks.
+3. Generate a `cfk-controlcenter.yaml` file in the `k8s` directory that will deploy Control Center to a Kubernetes cluster that is configured to connect to this new cluster.
 
 ## How to use
 
@@ -26,7 +27,7 @@ ssh_key (4): create, read, update, delete
 vpc (4): create, read, update, delete
 ```
 
-2. Run `make all`
+2. Run `make`
 
 3. When you no longer need the cluster and want to stop getting charged, run
 `make clean` to destroy all the resources that were created. You will not be 
