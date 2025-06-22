@@ -1,5 +1,5 @@
-
-all: init build config
+.PHONY: all init build config kerberos confluent showhosts destroy clean
+all: init build config showhosts
 
 init:
 	echo "initialize terraform env"
@@ -14,13 +14,16 @@ build:
 	tofu output -raw private_key > ./ansible_ssh/private_key
 	chmod 0400 ./ansible_ssh/private_key
 
+config: kerberos confluent
+
 kerberos:
 	ansible-playbook playbooks/kerberos.yml
 
 confluent:
 	ansible-playbook confluent.platform.all
 
-config: kerberos confluent
+showhosts:
+	ansible-inventory --graph
 
 destroy:
 	tofu destroy -var="ansible_host=''" -var="development_host=''"
