@@ -295,12 +295,21 @@ resource "digitalocean_loadbalancer" "bootstrap_lb" {
   droplet_tag = "broker"
   
   forwarding_rule {
+    entry_port     = 8090
+    entry_protocol = "tcp"
+
+    target_port     = 8090
+    target_protocol = "tcp"
+  }
+
+  forwarding_rule {
     entry_port     = 9092
     entry_protocol = "tcp"
 
     target_port     = 9092
     target_protocol = "tcp"
   }
+
 
   healthcheck {
     port     = 9092
