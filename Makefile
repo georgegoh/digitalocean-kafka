@@ -1,5 +1,5 @@
-.PHONY: all init build config kerberos confluent addons destroy clean
-all: init build config
+.PHONY: all init build config kerberos confluent addons showhosts destroy clean
+all: init build config showhosts
 
 init:
 	echo "initialize terraform env"
@@ -24,6 +24,9 @@ confluent:
 
 addons:
 	ansible-playbook playbooks/addons.yml
+
+showhosts:
+	ansible-inventory --graph
 
 destroy:
 	tofu destroy -var="ansible_host=''" -var="development_host=''"

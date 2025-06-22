@@ -21,6 +21,7 @@ echo 'do_token = "<your token here>"' > main.auto.tfvars
 ```
 droplet (4): create, read, update, delete
 firewall (4): create, read, update, delete
+load_balancer (4): create, read, update, delete
 ssh_key (4): create, read, update, delete
 vpc (4): create, read, update, delete
 ```

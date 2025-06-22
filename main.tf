@@ -31,6 +31,11 @@ variable "region" {
   type = string
   default = "sgp1"
 }
+variable "vpc_ip_range" {
+  description = "The internal ip subnet range for the VPC"
+  type = string
+  default = "10.10.10.0/24"
+}
 
 # Configure the DigitalOcean Provider
 provider "digitalocean" {
@@ -60,6 +65,7 @@ resource "digitalocean_ssh_key" "generated_key" {
 resource "digitalocean_vpc" "generated_vpc" {
   name = "terraform-vpc-kafka"
   region = var.region
+  ip_range = var.vpc_ip_range
   description = "An auto-generated VPC to isolate Kafka instances."
 }
 
@@ -101,7 +107,6 @@ resource "digitalocean_firewall" "generated_fw_ansible" {
     protocol = "tcp"
     port_range = "22"
     source_addresses = [var.ansible_host]
-    source_tags = ["kerberos_server"]
   }
 }
 
@@ -115,16 +120,34 @@ resource "digitalocean_firewall" "generated_fw_dev" {
     port_range = "2181"
     source_addresses = [var.development_host]
   }
+  
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "7770-7774"
+    source_addresses = [var.development_host]
+  }
 
   inbound_rule {
     protocol = "tcp"
-    port_range = "8082"
+    port_range = "8081-8083"
+    source_addresses = [var.development_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "8088"
     source_addresses = [var.development_host]
   }
 
   inbound_rule {
     protocol = "tcp"
     port_range = "8090"
+    source_addresses = [var.development_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "9092"
     source_addresses = [var.development_host]
   }
 
@@ -169,10 +192,16 @@ resource "digitalocean_firewall" "generated_fw_kerberos_clients" {
   }
 }
 
-# Create the inbound access firewall rule that allows the Ansible host to reach the target nodes
+# Create the inbound access firewall rule that allows traffic to/from the Kerberos server.
 resource "digitalocean_firewall" "generated_fw_kerberos_servers" {
   name = "terraform-firewall-kerberos-servers"
   tags = ["ansible_kerberos"]
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "22"
+    source_tags = ["kerberos_server"]
+  }
 
   inbound_rule {
     protocol = "tcp"
@@ -203,11 +232,25 @@ resource "digitalocean_firewall" "generated_fw_kerberos_servers" {
     port_range = "4444"
     source_addresses = [var.ansible_host]
   }
+}
+
+# Create the inbound access firewall rule that allows the bootstrap loadbalancer to reach the brokers.
+resource "digitalocean_firewall" "generated_fw_bootstrap" {
+  name = "terraform-firewall-bootstrap"
+  tags = ["broker"]
 
   inbound_rule {
     protocol = "tcp"
-    port_range = "464"
+    port_range = "8090"
     source_addresses = [var.ansible_host]
+    source_load_balancer_uids = [digitalocean_loadbalancer.bootstrap_lb.id]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "9092"
+    source_addresses = [var.ansible_host]
+    source_load_balancer_uids = [digitalocean_loadbalancer.bootstrap_lb.id]
   }
 }
 
@@ -231,7 +274,7 @@ resource "digitalocean_droplet" "zookeeper" {
   region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka", "kerberos_client"]
+  tags = ["ansible_kafka", "kerberos_client", "zookeeper"]
 }
 
 # Create 3 brokers
@@ -243,7 +286,42 @@ resource "digitalocean_droplet" "broker" {
   region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka", "kerberos_client"]
+  tags = ["ansible_kafka", "kerberos_client", "broker"]
+}
+
+# Create a bootstrap loadbalancer
+resource "digitalocean_loadbalancer" "bootstrap_lb" {
+  name   = "loadbalancer-bootstrap"
+  size = "lb-small"
+  size_unit = 1
+  type = "REGIONAL"
+  network = "EXTERNAL"
+  region = var.region
+  vpc_uuid = digitalocean_vpc.generated_vpc.id
+  droplet_tag = "broker"
+  
+  forwarding_rule {
+    entry_port     = 8090
+    entry_protocol = "tcp"
+
+    target_port     = 8090
+    target_protocol = "tcp"
+  }
+
+  forwarding_rule {
+    entry_port     = 9092
+    entry_protocol = "tcp"
+
+    target_port     = 9092
+    target_protocol = "tcp"
+  }
+
+
+  healthcheck {
+    port     = 9092
+    protocol = "tcp"
+  }
+
 }
 
 # Create a combined schema_registry/ksql/kafka_connect
@@ -279,6 +357,16 @@ resource "local_file" "hosts_yaml" {
     }
   )
   filename = "hosts.yml"
+}
+
+resource "local_file" "cfk_controlcenter_yaml" {
+  content = templatefile("k8s/cfk-controlcenter.tmpl",
+    {
+      bootstrap_lb_ip_addr = digitalocean_loadbalancer.bootstrap_lb.ip
+      utility_ip_addr = digitalocean_droplet.utility.ipv4_address
+    }
+  )
+  filename = "k8s/cfk-controlcenter.yaml"
 }
 
 output "private_key" {

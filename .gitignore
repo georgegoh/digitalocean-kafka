@@ -5,3 +5,5 @@ main.auto.tfvars
 terraform.tfstate
 terraform.tfstate.backup
 ansible_ssh
+k8s/cfk-controlcenter.yaml
+k8s/ingress.yaml
