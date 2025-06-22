@@ -337,6 +337,16 @@ resource "local_file" "hosts_yaml" {
   filename = "hosts.yml"
 }
 
+resource "local_file" "cfk_controlcenter_yaml" {
+  content = templatefile("k8s/cfk-controlcenter.tmpl",
+    {
+      bootstrap_lb_ip_addr = digitalocean_loadbalancer.bootstrap_lb.ip
+      utility_ip_addr = digitalocean_droplet.utility.ipv4_address
+    }
+  )
+  filename = "k8s/cfk-controlcenter.yaml"
+}
+
 output "private_key" {
   value = tls_private_key.ansible.private_key_pem
   sensitive = true
