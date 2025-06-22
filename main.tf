@@ -117,13 +117,31 @@ resource "digitalocean_firewall" "generated_fw_dev" {
 
   inbound_rule {
     protocol = "tcp"
-    port_range = "8082"
+    port_range = "7770-7774"
+    source_addresses = [var.development_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "8081-8083"
+    source_addresses = [var.development_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "8088"
     source_addresses = [var.development_host]
   }
 
   inbound_rule {
     protocol = "tcp"
     port_range = "8090"
+    source_addresses = [var.development_host]
+  }
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "9092"
     source_addresses = [var.development_host]
   }
 
@@ -208,11 +226,18 @@ resource "digitalocean_firewall" "generated_fw_kerberos_servers" {
     port_range = "4444"
     source_addresses = [var.ansible_host]
   }
+}
+
+# Create the inbound access firewall rule that allows the bootstrap loadbalancer to reach the brokers.
+resource "digitalocean_firewall" "generated_fw_bootstrap" {
+  name = "terraform-firewall-bootstrap"
+  tags = ["broker"]
 
   inbound_rule {
     protocol = "tcp"
-    port_range = "464"
+    port_range = "9092"
     source_addresses = [var.ansible_host]
+    source_load_balancer_uids = [digitalocean_loadbalancer.bootstrap_lb.id]
   }
 }
 
@@ -236,7 +261,7 @@ resource "digitalocean_droplet" "zookeeper" {
   region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka", "kerberos_client"]
+  tags = ["ansible_kafka", "kerberos_client", "zookeeper"]
 }
 
 # Create 3 brokers
@@ -248,7 +273,33 @@ resource "digitalocean_droplet" "broker" {
   region = var.region
   vpc_uuid = digitalocean_vpc.generated_vpc.id
   ssh_keys = [digitalocean_ssh_key.generated_key.fingerprint]
-  tags = ["ansible_kafka", "kerberos_client"]
+  tags = ["ansible_kafka", "kerberos_client", "broker"]
+}
+
+# Create a bootstrap loadbalancer
+resource "digitalocean_loadbalancer" "bootstrap_lb" {
+  name   = "loadbalancer-bootstrap"
+  size = "lb-small"
+  size_unit = 1
+  type = "REGIONAL"
+  network = "EXTERNAL"
+  region = var.region
+  vpc_uuid = digitalocean_vpc.generated_vpc.id
+  droplet_tag = "broker"
+  
+  forwarding_rule {
+    entry_port     = 9092
+    entry_protocol = "tcp"
+
+    target_port     = 9092
+    target_protocol = "tcp"
+  }
+
+  healthcheck {
+    port     = 9092
+    protocol = "tcp"
+  }
+
 }
 
 # Create a combined schema_registry/ksql/kafka_connect
