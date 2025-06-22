@@ -31,6 +31,11 @@ variable "region" {
   type = string
   default = "sgp1"
 }
+variable "vpc_ip_range" {
+  description = "The internal ip subnet range for the VPC"
+  type = string
+  default = "10.10.10.0/24"
+}
 
 # Configure the DigitalOcean Provider
 provider "digitalocean" {
@@ -60,6 +65,7 @@ resource "digitalocean_ssh_key" "generated_key" {
 resource "digitalocean_vpc" "generated_vpc" {
   name = "terraform-vpc-kafka"
   region = var.region
+  ip_range = var.vpc_ip_range
   description = "An auto-generated VPC to isolate Kafka instances."
 }
 
