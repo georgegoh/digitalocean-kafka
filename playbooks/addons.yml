@@ -1,0 +1,32 @@
+---
+- name: Install nc on zookeeper servers
+  hosts: zookeeper
+  tasks:
+    - name: Install nc
+      ansible.builtin.dnf:
+        name: nmap-ncat
+        state: present
+
+- name: Setup region failback detection and recovery
+  hosts: zookeeper
+  tasks:
+    - name: Install failback script
+      ansible.builtin.copy:
+        src: "../scripts/failback.sh"
+        dest: /usr/sbin/failback.sh
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Install failback service
+      ansible.builtin.copy:
+        src: "../scripts/failback.service"
+        dest: /etc/systemd/system/failback.service
+        owner: root
+        group: root
+        mode: '0744'
+
+    - name: Enable failback service
+      ansible.builtin.systemd.service:
+        name: failback.service
+        enabled: true

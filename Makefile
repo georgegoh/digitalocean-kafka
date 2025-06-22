@@ -1,4 +1,4 @@
-.PHONY: all init build config kerberos confluent showhosts destroy clean
+.PHONY: all init build config kerberos confluent addons showhosts destroy clean
 all: init build config showhosts
 
 init:
@@ -14,13 +14,16 @@ build:
 	tofu output -raw private_key > ./ansible_ssh/private_key
 	chmod 0400 ./ansible_ssh/private_key
 
-config: kerberos confluent
+config: kerberos confluent addons
 
 kerberos:
 	ansible-playbook playbooks/kerberos.yml
 
 confluent:
 	ansible-playbook confluent.platform.all
+
+addons:
+	ansible-playbook playbooks/addons.yml
 
 showhosts:
 	ansible-inventory --graph
