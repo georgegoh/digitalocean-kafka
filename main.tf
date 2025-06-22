@@ -107,7 +107,6 @@ resource "digitalocean_firewall" "generated_fw_ansible" {
     protocol = "tcp"
     port_range = "22"
     source_addresses = [var.ansible_host]
-    source_tags = ["kerberos_server"]
   }
 }
 
@@ -169,10 +168,16 @@ resource "digitalocean_firewall" "generated_fw_kerberos_clients" {
   }
 }
 
-# Create the inbound access firewall rule that allows the Ansible host to reach the target nodes
+# Create the inbound access firewall rule that allows traffic to/from the Kerberos server.
 resource "digitalocean_firewall" "generated_fw_kerberos_servers" {
   name = "terraform-firewall-kerberos-servers"
   tags = ["ansible_kerberos"]
+
+  inbound_rule {
+    protocol = "tcp"
+    port_range = "22"
+    source_tags = ["kerberos_server"]
+  }
 
   inbound_rule {
     protocol = "tcp"
